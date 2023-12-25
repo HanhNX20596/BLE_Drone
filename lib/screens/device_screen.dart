@@ -43,7 +43,10 @@ class _DeviceScreenState extends State<DeviceScreen> {
       _connectionState = state;
       if (state == BluetoothConnectionState.connected) {
         _services = []; // must rediscover services
+
+        onDiscoverServicesPressed();
       }
+
       if (state == BluetoothConnectionState.connected && _rssi == null) {
         _rssi = await widget.device.readRssi();
       }
@@ -123,11 +126,10 @@ class _DeviceScreenState extends State<DeviceScreen> {
   }
 
   Future onDiscoverServicesPressed() async {
-    if (mounted) {
-      setState(() {
-        _isDiscoveringServices = true;
-      });
-    }
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    if (mounted) setState(() => _isDiscoveringServices = true);
+
     try {
       _services = await widget.device.discoverServices();
       Snackbar.show(ABC.c, "Discover Services: Success", success: true);
@@ -135,11 +137,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
       Snackbar.show(ABC.c, prettyException("Discover Services Error:", e),
           success: false);
     }
-    if (mounted) {
-      setState(() {
-        _isDiscoveringServices = false;
-      });
-    }
+
+    if (mounted) setState(() => _isDiscoveringServices = false);
   }
 
   Future onRequestMtuPressed() async {

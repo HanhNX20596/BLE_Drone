@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_bluetooth/utils/byte_extension.dart';
 
 import "../utils/snackbar.dart";
 
@@ -16,19 +16,19 @@ class DescriptorTile extends StatefulWidget {
 }
 
 class _DescriptorTileState extends State<DescriptorTile> {
-  List<int> _value = [];
+  String _value = '';
 
   late StreamSubscription<List<int>> _lastValueSubscription;
 
   @override
   void initState() {
     super.initState();
+
     _lastValueSubscription = widget.descriptor.lastValueStream.listen((value) {
-      _value = value;
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() => _value = value.decode());
     });
+
+    onReadPressed();
   }
 
   @override
@@ -39,32 +39,12 @@ class _DescriptorTileState extends State<DescriptorTile> {
 
   BluetoothDescriptor get d => widget.descriptor;
 
-  List<int> _getRandomBytes() {
-    final math = Random();
-    return [
-      math.nextInt(255),
-      math.nextInt(255),
-      math.nextInt(255),
-      math.nextInt(255)
-    ];
-  }
-
   Future onReadPressed() async {
     try {
       await d.read();
       Snackbar.show(ABC.c, "Descriptor Read : Success", success: true);
     } catch (e) {
       Snackbar.show(ABC.c, prettyException("Descriptor Read Error:", e),
-          success: false);
-    }
-  }
-
-  Future onWritePressed() async {
-    try {
-      await d.write(_getRandomBytes());
-      Snackbar.show(ABC.c, "Descriptor Write : Success", success: true);
-    } catch (e) {
-      Snackbar.show(ABC.c, prettyException("Descriptor Write Error:", e),
           success: false);
     }
   }
@@ -79,35 +59,15 @@ class _DescriptorTileState extends State<DescriptorTile> {
     return Text(data, style: const TextStyle(fontSize: 13, color: Colors.grey));
   }
 
-  Widget buildReadButton(BuildContext context) {
+  Widget buildReadButton() {
     return TextButton(
       onPressed: onReadPressed,
       child: const Text("Read"),
     );
   }
 
-  Widget buildWriteButton(BuildContext context) {
-    return TextButton(
-      onPressed: onWritePressed,
-      child: const Text("Write"),
-    );
-  }
-
-  Widget buildButtonRow(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        buildReadButton(context),
-        buildWriteButton(context),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-
-    Route;
-
     return ListTile(
       title: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -118,7 +78,7 @@ class _DescriptorTileState extends State<DescriptorTile> {
           buildValue(context),
         ],
       ),
-      subtitle: buildButtonRow(context),
+      subtitle: buildReadButton(),
     );
   }
 }

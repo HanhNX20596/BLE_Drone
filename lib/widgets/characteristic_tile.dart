@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_bluetooth/utils/byte_extension.dart';
 
 import "../utils/snackbar.dart";
 import "descriptor_tile.dart";
@@ -23,20 +23,20 @@ class CharacteristicTile extends StatefulWidget {
 }
 
 class _CharacteristicTileState extends State<CharacteristicTile> {
-  List<int> _value = [];
+  String _value = '';
 
   late StreamSubscription<List<int>> _lastValueSubscription;
 
   @override
   void initState() {
     super.initState();
-    _lastValueSubscription =
-        widget.characteristic.lastValueStream.listen((value) {
-      _value = value;
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    _lastValueSubscription = widget.characteristic.lastValueStream.listen(
+      (value) {
+        if (mounted) setState(() => _value = value.decode());
+      },
+    );
+
+    if (read) onReadPressed();
   }
 
   @override
@@ -45,17 +45,9 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
     super.dispose();
   }
 
-  BluetoothCharacteristic get c => widget.characteristic;
+  bool get read => widget.characteristic.properties.read;
 
-  List<int> _getRandomBytes() {
-    final math = Random();
-    return [
-      math.nextInt(255),
-      math.nextInt(255),
-      math.nextInt(255),
-      math.nextInt(255)
-    ];
-  }
+  BluetoothCharacteristic get c => widget.characteristic;
 
   Future onReadPressed() async {
     try {
@@ -63,19 +55,6 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
       Snackbar.show(ABC.c, "Read: Success", success: true);
     } catch (e) {
       Snackbar.show(ABC.c, prettyException("Read Error:", e), success: false);
-    }
-  }
-
-  Future onWritePressed() async {
-    try {
-      await c.write(_getRandomBytes(),
-          withoutResponse: c.properties.writeWithoutResponse);
-      Snackbar.show(ABC.c, "Write: Success", success: true);
-      if (c.properties.read) {
-        await c.read();
-      }
-    } catch (e) {
-      Snackbar.show(ABC.c, prettyException("Write Error:", e), success: false);
     }
   }
 
@@ -102,8 +81,10 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
   }
 
   Widget buildValue(BuildContext context) {
-    String data = _value.toString();
-    return Text(data, style: const TextStyle(fontSize: 13, color: Colors.grey));
+    return Text(
+      _value,
+      style: const TextStyle(fontSize: 13, color: Colors.grey),
+    );
   }
 
   Widget buildReadButton(BuildContext context) {
@@ -111,18 +92,6 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
         child: const Text("Read"),
         onPressed: () async {
           await onReadPressed();
-          if (mounted) {
-            setState(() {});
-          }
-        });
-  }
-
-  Widget buildWriteButton(BuildContext context) {
-    bool withoutResp = widget.characteristic.properties.writeWithoutResponse;
-    return TextButton(
-        child: Text(withoutResp ? "WriteNoResp" : "Write"),
-        onPressed: () async {
-          await onWritePressed();
           if (mounted) {
             setState(() {});
           }
@@ -150,7 +119,7 @@ class _CharacteristicTileState extends State<CharacteristicTile> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (read) buildReadButton(context),
-        if (write) buildWriteButton(context),
+        // if (write) buildWriteButton(context),
         if (notify || indicate) buildSubscribeButton(context),
       ],
     );
